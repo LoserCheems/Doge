@@ -64,7 +64,10 @@ def _prepare_4d_causal_attention_mask_with_cache_position_and_dynamic_mask(
     batch_size: int = None,
 ):
     mask_length = attention_mask.size(-1)
-    num_heads = dynamic_mask.size(0)
+    if dynamic_mask is not None:
+        num_heads = dynamic_mask.size(0)
+    else:
+        num_heads = 1
 
     if attention_mask is not None and attention_mask.dim() == 4:
         causal_mask = attention_mask
@@ -642,7 +645,10 @@ class DogeModel(DogePreTrainedModel):
 
         self.word_embed = Embedding(config)
         self.rotary_emb = RotaryEmbedding(config)
-        self.dynamic_mask = nn.Parameter(torch.round(torch.ones(config.num_attention_heads, config.max_position_embeddings)))
+        if config.dynamic_mask:
+            self.dynamic_mask = nn.Parameter(torch.round(torch.ones(config.num_attention_heads, config.max_position_embeddings)))
+        else:
+            self.dynamic_mask = None
 
         # 添加解码器层
         # Add decoder layers
