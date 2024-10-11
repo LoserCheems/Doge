@@ -1,0 +1,10 @@
+# transformers
+transformers
+
+# 数据集工具包
+# dataset toolkits
+datasets
+
+# 评估工具包
+# eval toolkits
+lm-eval==0.4.2
