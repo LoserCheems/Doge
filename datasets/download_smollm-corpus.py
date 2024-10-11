@@ -47,13 +47,13 @@ if __name__ == "__main__":
     num_proc = args.num_proc
 
     # cosmopedia-v2
-    dataset = load_dataset("HuggingfaceTB/smollm-corpus", "cosmopedia-v2", split="train", num_proc=num_proc)
+    dataset = load_dataset("HuggingfaceTB/smollm-corpus", "cosmopedia-v2", split="train", num_proc=num_proc, cache_dir=args.cache_dir)
     dataset.save_to_disk(args.save_dir + "/smollm-corpus/cosmopedia-v2", num_proc=num_proc) 
     dataset = None
     delete_cache(args.cache_dir)
 
     # python-edu
-    dataset = load_dataset("HuggingfaceTB/smollm-corpus", "python-edu", split="train", num_proc=num_proc)
+    dataset = load_dataset("HuggingfaceTB/smollm-corpus", "python-edu", split="train", num_proc=num_proc, cache_dir=args.cache_dir)
     dataset = dataset.map(download_python_edu_contents, input_columns="blob_id", num_proc=num_proc)
     dataset = dataset.filter(lambda x: x['download_success'])
     dataset.save_to_disk(args.save_dir + "/smollm-corpus/python-edu", num_proc=num_proc)
@@ -61,7 +61,7 @@ if __name__ == "__main__":
     delete_cache(args.cache_dir)
 
     # fineweb-edu-dedup
-    dataset = load_dataset("HuggingFaceTB/smollm-corpus", "fineweb-edu-dedup", split="train", num_proc=num_proc)
+    dataset = load_dataset("HuggingFaceTB/smollm-corpus", "fineweb-edu-dedup", split="train", num_proc=num_proc, cache_dir=args.cache_dir)
     dataset.save_to_disk(args.save_dir + "/smollm-corpus/fineweb-edu-dedup", num_proc=num_proc)
     dataset = None
     delete_cache(args.cache_dir)
