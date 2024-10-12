@@ -4,9 +4,6 @@ import boto3
 import gzip
 from botocore.exceptions import ClientError
 import shutil
-from transformers.utils import logging
-
-logger = logging.get_logger(__name__)
 
 
 s3 = boto3.client('s3')
@@ -39,10 +36,6 @@ if __name__ == "__main__":
     parser.add_argument("--cache_dir", type=str, default="cache")
     parser.add_argument("--save_dir", type=str, default="datasets")
     args = parser.parse_args()
-    logger.info(
-        "You'd better reserve 1T storage space, the dataset is really large..."
-        "您最好预留 1T 的存储空间, 数据集真的很大..."
-    )
 
     num_proc = args.num_proc
 

@@ -46,7 +46,7 @@ from transformers.utils import (
     logging,
 )
 
-from .configuration_doge import DogeConfig
+from configuration_doge import DogeConfig
 
 
 logger = logging.get_logger(__name__)
@@ -232,17 +232,17 @@ class DogeAttention(nn.Module):
             self.v_queries = nn.Sequential(
                 nn.Linear(
                     self.hidden_size,
-                    self.attention_head_dim * self.num_key_value_heads * self.dynamic_value_num_heads,
+                    self.attention_head_dim * self.dynamic_value_num_heads,
                     bias=config.hidden_bias,
                 ),
-                Rearrange('b t (h d) -> b t h d', h = self.dynamic_value_num_heads)
+                Rearrange('b t (h n) -> b t h n', h = self.dynamic_value_num_heads)
             )
             self.num_v_keys = int(math.sqrt(self.num_key_value_heads))
             self.v_keys = nn.Parameter(
                 torch.zeros(
                     self.dynamic_value_num_heads, 
                     self.num_v_keys, 
-                    self.attention_head_dim * self.num_key_value_heads
+                    self.attention_head_dim
                 )
             )
             self.v_embed = nn.Embedding(
@@ -265,7 +265,7 @@ class DogeAttention(nn.Module):
 
     def compute_value_states(self, hidden_states: torch.Tensor) -> torch.Tensor:
         v_queries = self.v_queries(hidden_states)
-        sim = torch.einsum('b t h d, h k d -> b t h k', v_queries, self.v_keys)
+        sim = torch.einsum('b t h n, h k n -> b t h k', v_queries, self.v_keys)
         indices = sim.topk(self.dynamic_value_num_heads * 2, dim=-1).indices
         v_embed = self.v_embed(indices)
         hidden_states = torch.einsum('b t d, b t h k d -> b t d', hidden_states, v_embed)
@@ -318,7 +318,6 @@ class DogeAttention(nn.Module):
         attn_output = self.out_proj(attn_output)
 
         return attn_output, past_key_value
-
 
 
 class DogeSdpaAttention(DogeAttention):
