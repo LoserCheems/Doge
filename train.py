@@ -1,95 +1,158 @@
 import os
-import logging
+import argparse
+import yaml
 from transformers import TrainingArguments, Trainer, DataCollatorForLanguageModeling
 from datasets import load_from_disk
 from transformers import AutoTokenizer
-from models.configuration_doge import DogeConfig
-from models.modeling_doge import DogeForCausalLM
+import logging
 
-
-model_name = 'doge_38M'
-logging_dir = f'./logs_{model_name}'
-
-# 设置日志写入文件
-os.makedirs(logging_dir, exist_ok=True)
-logging.basicConfig(filename=f'{logging_dir}/log.log', level=logging.INFO)
 logger = logging.getLogger(__name__)
-console_handler = logging.StreamHandler()
-logger.addHandler(console_handler)
-
-tokenizer = AutoTokenizer.from_pretrained('./models')
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
 
-########################
-####### 预训练 #########
-########################
-# 初始化模型
-config = DogeConfig()
-config.vocab_size = tokenizer.vocab_size
-model = DogeForCausalLM(config=config)
-# 宇宙百科用于文本生成训练
-dataset = load_from_disk(f'./Datasets/cosmopedia_25600000_2048')
-dataset["train"] = dataset["train"].shuffle(seed=233).select(range(1 * 512 * 2000))
+def load_yaml(yaml_path):
+    with open(yaml_path, 'r', encoding='utf-8') as f:
+        return yaml.safe_load(f)
 
 
-########################
-######## 微调 ##########
-########################
-# # 加载预训练权重
-# model = DogeForCausalLM.from_pretrained("./results_doge/zh/33M/1-1/checkpoint-10000")
-# # 无限指令用于指令对话训练
-# dataset = load_from_disk(f'./Datasets/Infinity-Instruct_10000000_2048')
-# dataset["train"] = dataset["train"].shuffle(seed=233).select(range(1 * 32 * 20000))
+def get_tokenizer_and_model(yaml):
+    tokenizer = AutoTokenizer.from_pretrained(yaml['tokenizer_path'])
+    if yaml['mode'] == 'pretrain':
+        if yaml['model_name'] == 'doge':
+            from models.configuration_doge import DogeConfig
+            from models.modeling_doge import DogeForCausalLM
 
-num_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
-logger.info(model)
-logger.info(num_params)
-exit()
-training_args = TrainingArguments(
-    output_dir=f'./results_{model_name}',
-    logging_dir=logging_dir,
-    logging_steps=100,
+            config = DogeConfig(**yaml['model_config'])
+            config.vocab_size = tokenizer.vocab_size
+            model = DogeForCausalLM(config=config)
+        elif yaml['model_name'] == 'llama':
+            from transformers.models.llama.configuration_llama import LlamaConfig
+            from transformers.models.llama.modeling_llama import LlamaForCausalLM
 
-    do_train=True,
-    num_train_epochs=1,
-    # max_steps=5000,
+            config = LlamaConfig(**yaml['model_config'])
+            config.vocab_size = tokenizer.vocab_size
+            model = LlamaForCausalLM(config=config)
+        elif yaml['model_name'] == 'mamba2':
+            from transformers.models.mamba2.configuration_mamba2 import Mamba2Config
+            from transformers.models.mamba2.modeling_mamba2 import Mamba2ForCausalLM
 
-    do_eval=True,
-    eval_strategy="steps",
-    eval_steps=500,
-    
-    per_device_train_batch_size=1,
-    per_device_eval_batch_size=1,
-    
-    weight_decay=0.01,
-    learning_rate=8e-4, # train: 2e-4 finetune: 2e-5 10M: 8e-4
-    warmup_ratio=0.1, # train: 0.1 finetune: 0.0
-    lr_scheduler_type='cosine_with_min_lr',
-    lr_scheduler_kwargs={'min_lr_rate': 0.1},
-    
-    save_safetensors=False,
-    save_strategy="steps",
-    save_steps=500,
+            config = Mamba2Config(**yaml['model_config'])
+            config.vocab_size = tokenizer.vocab_size
+            model = Mamba2ForCausalLM(config=config)
+        else:
+            raise ValueError(f'Invalid model name: {yaml["model_name"]}')
 
-    bf16=True,
-    max_grad_norm=1.0,
-    gradient_accumulation_steps=512, # train: 256 finetune: 32
-)
+    elif yaml['mode'] == 'finetune':
+        if yaml['model_name'] == 'doge':
+            from models.modeling_doge import DogeForCausalLM
+            model = DogeForCausalLM.from_pretrained(yaml['pretrained_path'])
+        elif yaml['model_name'] == 'llama':
+            from transformers.models.llama.modeling_llama import LlamaForCausalLM
+            model = LlamaForCausalLM.from_pretrained(yaml['pretrained_path'])
+        elif yaml['model_name'] == 'mamba2':
+            from transformers.models.mamba2.modeling_mamba2 import Mamba2ForCausalLM
+            model = Mamba2ForCausalLM.from_pretrained(yaml['pretrained_path'])
+        else:
+            raise ValueError(f'Invalid model name: {yaml["model_name"]}')
+    else:
+        raise ValueError(f'Invalid mode: {yaml["mode"]}')
+    return tokenizer, model
 
-data_collator = DataCollatorForLanguageModeling(
-    tokenizer=tokenizer, mlm=False, mlm_probability=0.05
-)
 
-    
-trainer = Trainer(
-    model=model,
-    args=training_args,
-    train_dataset=dataset['train'],
-    eval_dataset=dataset['test'],
-    tokenizer=tokenizer,
-    data_collator=data_collator,
-)
+def get_dataset(yaml):
+    dataset = load_from_disk(yaml['dataset_path'])
+    dataset["train"] = dataset["train"].select(range(yaml['gradient_accumulation_steps'] * yaml['per_device_train_batch_size'] * yaml['num_train_steps']))
+    return dataset
+
+
+def get_trainer(yaml, tokenizer, model, dataset):
+    model_num_params = sum(p.numel() for p in model.parameters() if p.requires_grad) // 1000000
+    num_tokens = len(dataset['train'][0]['input_ids']) * yaml['gradient_accumulation_steps'] * yaml['per_device_train_batch_size'] * yaml['num_train_steps']
+
+    logger.info(f'在 {num_tokens // 1_000_000_000}B tokens 上训练 {yaml["model_name"]}-{model_num_params}M 模型 {yaml["num_train_epochs"]} 个轮次')
+    logger.info(f'Training {yaml["model_name"]}-{model_num_params}M model for {yaml["num_train_epochs"]} epochs on {num_tokens // 1_000_000_000}B tokens')
+
+    logging_dir = f'{yaml["logging_dir"]}/{yaml["model_name"]}-{model_num_params}M'
+    output_dir = f'{yaml["output_dir"]}/{yaml["model_name"]}-{model_num_params}M'
+
+    training_args = TrainingArguments(
+        # 日志和输出目录
+        # Logging and output directory
+        logging_dir=logging_dir,
+        output_dir=output_dir,
+
+        # 训练参数
+        # Training parameters
+        do_train=True,
+        num_train_epochs=yaml['num_train_epochs'],
+        weight_decay=yaml['weight_decay'],
+        learning_rate=yaml['learning_rate'],
+        warmup_ratio=yaml['warmup_ratio'],
+        lr_scheduler_type=yaml['lr_scheduler_type'],
+        lr_scheduler_kwargs={'min_lr_rate': yaml['min_lr_rate']},
+        gradient_accumulation_steps=yaml['gradient_accumulation_steps'],
+
+        # 评估参数
+        # Evaluation parameters
+        do_eval=True,
+        eval_strategy='steps',
+        eval_steps=yaml['eval_steps'],
+
+        # 批大小
+        # Batch size
+        per_device_train_batch_size=yaml['per_device_train_batch_size'],
+        per_device_eval_batch_size=yaml['per_device_eval_batch_size'],
+
+        
+        # 保存参数
+        # Save parameters
+        save_safetensors=yaml['save_safetensors'],
+        save_strategy='steps',
+        save_steps=yaml['save_steps'],
+
+        # 混合精度
+        # Mixed precision
+        bf16=yaml['bf16'],
+    )
+
+    data_collator = DataCollatorForLanguageModeling(
+        tokenizer=tokenizer,
+        mlm=False, mlm_probability=0.05
+    )
+
+    trainer = Trainer(
+        model=model,
+        args=training_args,
+        train_dataset=dataset['train'],
+        eval_dataset=dataset['test'],
+        tokenizer=tokenizer,
+        data_collator=data_collator,
+    )
+
+    return trainer
+
+
+
+def main(args):
+    # 加载配置文件
+    # load configuration file
+    yaml = load_yaml(args.config)
+    # 加载分词器并初始化模型
+    # load tokenizer and initialize model
+    tokenizer, model = get_tokenizer_and_model(yaml)
+    # 加载数据集
+    # load dataset
+    dataset = get_dataset(yaml)
+    # 初始化训练器
+    # initialize trainer
+    trainer = get_trainer(yaml, tokenizer, model, dataset)
+    # 开始训练
+    # start training
+    trainer.train()
+
 
 if __name__ == '__main__':
-    
-    trainer.train()
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--config', type=str, default='config.yaml')
+    args = parser.parse_args()
+    main(args)

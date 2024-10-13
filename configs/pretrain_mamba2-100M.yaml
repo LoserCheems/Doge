@@ -1,0 +1,32 @@
+# 训练配置文件
+mode: "pretrain"
+model_name: "doge"
+pretrained_path: null
+tokenizer_path: "./models"
+dataset_path: "./data"
+logging_dir: "./logs"
+output_dir: "./outputs"
+num_train_steps: 5000
+num_train_epochs: 2
+weight_decay: 0.01
+learning_rate: 8e-4
+warmup_ratio: 0.1
+lr_scheduler_type: "cosine_with_min_lr"
+min_lr_rate: 0.1
+gradient_accumulation_steps: 512
+eval_steps: 500
+per_device_train_batch_size: 1
+per_device_eval_batch_size: 1
+save_safetensors: false
+save_steps: 1000
+bf16: True
+
+model_config:
+  num_hidden_layers: 32
+  hidden_size: 512
+  num_heads: 8
+  head_dim: 64
+  state_size: 64
+  expand: 2
+  chunk_size: 256
+  use_cache: True
