@@ -8,3 +8,5 @@ pip install -e .
 ```
 
 ```python
+python -m zoology.launch eval_mqar.py
+```

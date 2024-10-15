@@ -1,0 +1,19 @@
+{"time":"2024-10-14T14:59:15.0510614+08:00","level":"INFO","msg":"using version","core version":"0.18.3"}
+{"time":"2024-10-14T14:59:15.0510614+08:00","level":"INFO","msg":"created symlink","path":"a:\\Pytorch_Workspace\\Doge\\Doge\\wandb\\run-20241014_145915-jyfzavhn\\logs\\debug-core.log"}
+{"time":"2024-10-14T14:59:17.0519725+08:00","level":"ERROR","msg":"dialing: google: could not find default credentials. See https://cloud.google.com/docs/authentication/external/set-up-adc for more information"}
+{"time":"2024-10-14T14:59:17.0597951+08:00","level":"INFO","msg":"created new stream","id":"jyfzavhn"}
+{"time":"2024-10-14T14:59:17.0597951+08:00","level":"INFO","msg":"stream: started","id":"jyfzavhn"}
+{"time":"2024-10-14T14:59:17.0597951+08:00","level":"INFO","msg":"sender: started","stream_id":{"value":"jyfzavhn"}}
+{"time":"2024-10-14T14:59:17.0597951+08:00","level":"INFO","msg":"handler: started","stream_id":{"value":"jyfzavhn"}}
+{"time":"2024-10-14T14:59:17.0597951+08:00","level":"INFO","msg":"writer: Do: started","stream_id":{"value":"jyfzavhn"}}
+{"time":"2024-10-14T14:59:17.9741597+08:00","level":"INFO","msg":"wandb-core","!BADKEY":null}
+{"time":"2024-10-14T14:59:17.9746628+08:00","level":"INFO","msg":"Starting system monitor"}
+{"time":"2024-10-14T14:59:18.0973105+08:00","level":"INFO","msg":"Stopping system monitor"}
+{"time":"2024-10-14T14:59:18.1007149+08:00","level":"INFO","msg":"Stopped system monitor"}
+{"time":"2024-10-14T14:59:23.1002275+08:00","level":"ERROR","msg":"monitor: gpu: timeout waiting for process to exit"}
+{"time":"2024-10-14T14:59:23.90672+08:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2024-10-14T14:59:26.5727272+08:00","level":"INFO","msg":"stream: closing","id":"jyfzavhn"}
+{"time":"2024-10-14T14:59:26.5727272+08:00","level":"INFO","msg":"handler: closed","stream_id":{"value":"jyfzavhn"}}
+{"time":"2024-10-14T14:59:26.5727272+08:00","level":"INFO","msg":"sender: closed","stream_id":{"value":"jyfzavhn"}}
+{"time":"2024-10-14T14:59:26.5727272+08:00","level":"INFO","msg":"writer: Close: closed","stream_id":{"value":"jyfzavhn"}}
+{"time":"2024-10-14T14:59:26.5727272+08:00","level":"INFO","msg":"stream: closed","id":"jyfzavhn"}

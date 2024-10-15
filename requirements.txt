@@ -1,5 +1,6 @@
 # transformers
 transformers
+sentencepiece
 
 # 数据集工具包
 # dataset toolkits
@@ -8,3 +9,14 @@ datasets
 # 评估工具包
 # eval toolkits
 lm-eval==0.4.2
+numpy
+einops
+tqdm
+pandas
+seaborn
+matplotlib
+rich
+rich
+PyYAML
+pydantic>=2.0.0,<2.5.0
+wandb
